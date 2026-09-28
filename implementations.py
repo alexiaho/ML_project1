@@ -11,11 +11,8 @@ def compute_loss_mse(y, tx, w):
     Returns:
         the value of the loss (a scalar), corresponding to the input parameters w.
     """
-
-    e = y - tx@w 
-    loss = 1/(2*y.shape[0])*np.sum(e**2)
-
-    return loss
+    e = y - tx @ w 
+    return 1 / 2 * np.mean(e**2)
 
 def compute_gradient(y, tx, w):
     """Computes the gradient at w.
@@ -28,9 +25,8 @@ def compute_gradient(y, tx, w):
     Returns:
         An numpy array of shape (2, ) (same shape as w), containing the gradient of the loss at w.
     """
-
-    e = y - tx@w
-    gradient = -1/y.shape[0] * tx.T@e
+    e = y - tx @ w
+    gradient = -1/y.shape[0] * tx.T @ e
     return gradient
 
 def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma) : 
@@ -46,15 +42,15 @@ def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma) :
         Returns:
             (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
             
-        """
-
+    """
     w = initial_w
 
     for n_iter in range(max_iters):
-        loss = compute_loss_mse(y, tx ,w)
         gradient = compute_gradient(y, tx, w)
-        w = w - gamma* gradient
-
+        w = w - gamma * gradient
+    
+    loss = compute_loss_mse(y, tx ,w) # Loss computed after final weight update
+    
     return (w, loss)
     
 def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
@@ -90,7 +86,7 @@ def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
     for minibatch_y, minibatch_tx in batch_iter(y, tx, 32):
         <DO-SOMETHING>
     """
-    data_size = len(y)  # NUmber of data points.
+    data_size = len(y)  # Number of data points.
     batch_size = min(data_size, batch_size)  # Limit the possible size of the batch.
     max_batches = int(
         data_size / batch_size
@@ -116,26 +112,6 @@ def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
         )  # The first data point of the following batch
         yield y[start_index:end_index], tx[start_index:end_index]
 
-def compute_stoch_gradient(y, tx, w):
-    """Compute a stochastic gradient at w from just few examples n and their corresponding y_n labels.
-
-    Args:
-        y: shape=(N, )
-        tx: shape=(N,2)
-        w: shape=(2, ). The vector of model parameters.
-
-    Returns:
-        An array of shape (2, ) (same shape as w), containing the stochastic gradient of the loss at w.
-    """
-
-    # ***************************************************
-    # INSERT YOUR CODE HERE
-    # TODO: implement stochastic gradient computation. It's the same as the usual gradient.
-    # ***************************************************
-    e = y - tx@w
-    gradient = -1/y.shape[0] * tx.T@e
-    return gradient
-
 def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma) :
     """The Stochastic Gradient Descent algorithm (SGD).
 
@@ -150,19 +126,21 @@ def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma) :
     Returns:
         (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
     """
-    
-    # Define parameters to store w and loss
     w = initial_w
 
     for n_iter in range(max_iters):
         for y_batch, tx_batch in batch_iter(y, tx, batch_size=1):
+            
             # Compute a stochastic gradient and loss
-            gradient, _ = compute_stoch_gradient(y_batch, tx_batch, w)
+            gradient = compute_gradient(y_batch, tx_batch, w)  # gradient computed on small batch
+            
             # Update w through the stochastic gradient update
             w = w - gamma * gradient
+            
             # Calculate loss
             loss = compute_loss_mse(y, tx, w)
-    return(w, loss)
+   
+    return (w, loss)
 
 def least_squares(y, tx) : 
     """Calculate the least squares solution.
@@ -178,7 +156,6 @@ def least_squares(y, tx) :
     >>> least_squares(np.array([0.1,0.2]), np.array([[2.3, 3.2], [1., 0.1]]))
     (array([ 0.21212121, -0.12121212]), 8.666684749742561e-33)
     """
-
     w = np.linalg.solve(tx.T@tx, tx.T@y)
     e = y - tx@w
     mse = 1/(2*y.shape[0]) * e.T@e
@@ -200,8 +177,11 @@ def ridge_regression(y, tx, lambda_) :
     >>> ridge_regression(np.array([0.1,0.2]), np.array([[2.3, 3.2], [1., 0.1]]), 1)
     array([0.03947092, 0.00319628])
     """
-    w = np.linalg.solve(tx.T@tx+2*tx.shape[0]*lambda_*np.identity(tx.shape[1]),tx.T@y)
-    loss = compute_loss_mse(y, tx, w) #not sure if this is what they meant by not including penalty term
+    w = np.linalg.solve(
+        tx.T @ tx + 2 * tx.shape[0] * lambda_ * np.identity(tx.shape[1]), 
+        tx.T @ y
+    )
+    loss = compute_loss_mse(y, tx, w) 
     return (w, loss)
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma) :
