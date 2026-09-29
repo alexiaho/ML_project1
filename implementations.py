@@ -185,6 +185,7 @@ def ridge_regression(y, tx, lambda_) :
     return (w, loss)
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma) :
+    
     raise NotImplementedError
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma) :
