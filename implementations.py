@@ -184,6 +184,84 @@ def ridge_regression(y, tx, lambda_) :
     loss = compute_loss_mse(y, tx, w) 
     return (w, loss)
 
+def sigmoid(t):
+    """apply sigmoid function on t.
+
+    Args:
+        t: scalar or numpy array
+
+    Returns:
+        scalar or numpy array
+
+    >>> sigmoid(np.array([0.1]))
+    array([0.52497919])
+    >>> sigmoid(np.array([0.1, 0.1]))
+    array([0.52497919, 0.52497919])
+    """
+
+    sigma = 1.0 / (1.0 + np.exp(-t))
+    return sigma
+
+def calculate_loss_logistic(y, tx, w):
+    """compute the cost by negative log likelihood.
+
+    Args:
+        y:  shape=(N, 1)
+        tx: shape=(N, D)
+        w:  shape=(D, 1)
+
+    Returns:
+        a non-negative loss
+
+    >>> y = np.c_[[0., 1.]]
+    >>> tx = np.arange(4).reshape(2, 2)
+    >>> w = np.c_[[2., 3.]]
+    >>> round(calculate_loss(y, tx, w), 8)
+    1.52429481
+    """
+    assert y.shape[0] == tx.shape[0]
+    assert tx.shape[1] == w.shape[0]
+
+    # ***************************************************
+    # INSERT YOUR CODE HERE
+    # TODO
+    # ***************************************************
+    pred = sigmoid(tx @ w)
+    loss = -(1/ y.shape[0]) * np.sum(
+        y * np.log(pred) + (1 - y) * np.log(1 - pred)
+    )
+    return float(loss)
+
+def calculate_gradient_logistic(y, tx, w):
+    """compute the gradient of loss.
+
+    Args:
+        y:  shape=(N, 1)
+        tx: shape=(N, D)
+        w:  shape=(D, 1)
+
+    Returns:
+        a vector of shape (D, 1)
+
+    >>> np.set_printoptions(8)
+    >>> y = np.c_[[0., 1.]]
+    >>> tx = np.arange(6).reshape(2, 3)
+    >>> w = np.array([[0.1], [0.2], [0.3]])
+    >>> calculate_gradient(y, tx, w)
+    array([[-0.10370763],
+           [ 0.2067104 ],
+           [ 0.51712843]])
+    """
+    # ***************************************************
+    # INSERT YOUR CODE HERE
+    # TODO
+    # ***************************************************
+    grad = 1/y.shape[0] * tx.T@(sigmoid(tx@w)-y)
+    return grad
+
+
+
+
 def logistic_regression(y, tx, initial_w, max_iters, gamma) :
     raise NotImplementedError
 
