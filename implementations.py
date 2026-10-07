@@ -153,8 +153,6 @@ def least_squares(y, tx) :
     Returns:
         (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
     
-    >>> least_squares(np.array([0.1,0.2]), np.array([[2.3, 3.2], [1., 0.1]]))
-    (array([ 0.21212121, -0.12121212]), 8.666684749742561e-33)
     """
     w = np.linalg.solve(tx.T@tx, tx.T@y)
     e = y - tx@w
@@ -172,10 +170,6 @@ def ridge_regression(y, tx, lambda_) :
     Returns:
         (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
     
-    >>> ridge_regression(np.array([0.1,0.2]), np.array([[2.3, 3.2], [1., 0.1]]), 0)
-    array([ 0.21212121, -0.12121212])
-    >>> ridge_regression(np.array([0.1,0.2]), np.array([[2.3, 3.2], [1., 0.1]]), 1)
-    array([0.03947092, 0.00319628])
     """
     w = np.linalg.solve(
         tx.T @ tx + 2 * tx.shape[0] * lambda_ * np.identity(tx.shape[1]), 
@@ -193,10 +187,6 @@ def sigmoid(t):
     Returns:
         scalar or numpy array
 
-    >>> sigmoid(np.array([0.1]))
-    array([0.52497919])
-    >>> sigmoid(np.array([0.1, 0.1]))
-    array([0.52497919, 0.52497919])
     """
 
     sigma = 1.0 / (1.0 + np.exp(-t))
@@ -213,19 +203,10 @@ def calculate_loss_logistic(y, tx, w):
     Returns:
         a non-negative loss
 
-    >>> y = np.c_[[0., 1.]]
-    >>> tx = np.arange(4).reshape(2, 2)
-    >>> w = np.c_[[2., 3.]]
-    >>> round(calculate_loss(y, tx, w), 8)
-    1.52429481
     """
     assert y.shape[0] == tx.shape[0]
     assert tx.shape[1] == w.shape[0]
 
-    # ***************************************************
-    # INSERT YOUR CODE HERE
-    # TODO
-    # ***************************************************
     pred = sigmoid(tx @ w)
     loss = -(1/ y.shape[0]) * np.sum(
         y * np.log(pred) + (1 - y) * np.log(1 - pred)
@@ -242,30 +223,86 @@ def calculate_gradient_logistic(y, tx, w):
 
     Returns:
         a vector of shape (D, 1)
-
-    >>> np.set_printoptions(8)
-    >>> y = np.c_[[0., 1.]]
-    >>> tx = np.arange(6).reshape(2, 3)
-    >>> w = np.array([[0.1], [0.2], [0.3]])
-    >>> calculate_gradient(y, tx, w)
-    array([[-0.10370763],
-           [ 0.2067104 ],
-           [ 0.51712843]])
     """
-    # ***************************************************
-    # INSERT YOUR CODE HERE
-    # TODO
-    # ***************************************************
+
     grad = 1/y.shape[0] * tx.T@(sigmoid(tx@w)-y)
     return grad
 
+def learning_by_gradient_descent(y, tx, w, gamma):
+    """
+    Do one step of gradient descent using logistic regression. Return the loss and the updated w.
 
+    Args:
+        y:  shape=(N, 1)
+        tx: shape=(N, D)
+        w:  shape=(D, 1)
+        gamma: float
 
+    Returns:
+        loss: scalar number
+        w: shape=(D, 1)
+    """
+    grad = calculate_gradient_logistic(y, tx, w)
+    loss = calculate_loss_logistic(y, tx, w)
+    w = w - gamma * grad
+
+    return loss, w
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma) :
-    raise NotImplementedError
+    '''
+    Logistic regression using gradient descent
+
+    Args : 
+        y : shape(N, 1)
+        tx : shape(N, D)
+        initial_w : shape(D, 1)
+        max_inters : int
+        gamma : float
+
+    Returns : 
+        (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
+    '''
+    w = initial_w
+    for iter in range(max_iters):
+        loss, w = learning_by_gradient_descent(y, tx, w, gamma)
+    return (w, loss)
+
+def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
+    """
+    Do one step of gradient descent, using the penalized logistic regression.
+    Return the loss and updated w.
+
+    Args:
+        y:  shape=(N, 1)
+        tx: shape=(N, D)
+        w:  shape=(D, 1)
+        gamma: scalar
+        lambda_: scalar
+
+    Returns:
+        loss: scalar number
+        w: shape=(D, 1)
+    """
+    loss = calculate_loss_logistic(y, tx, w)
+    gradient = calculate_gradient_logistic(y, tx, w) + 2 * lambda_ * w
+    w = w - gamma*gradient
+    return loss, w
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma) :
-    raise NotImplementedError
+    '''
+    Regularized logistic regression using gradient descent
 
+    Args : 
+        y : shape(N, 1)
+        tx : shape(N, D)
+        initial_w : shape(D, 1)
+        max_inters : int
+        gamma : float
 
+    Returns : 
+        (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
+    '''
+    w = initial_w
+    for iter in range(max_iters):
+        loss, w = learning_by_penalized_gradient(y, tx, w, gamma, lambda_)
+    return (w, loss)
