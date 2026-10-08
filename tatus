@@ -1,0 +1,10 @@
+[33m8a3918f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mTesting-functions[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/Testing-functions[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m merge main/logistic regression
+[33mcf79c64[m completed logistic regression functions (not tested)
+[33m3e6ba88[m starting on logisitc regression
+[33mf96b4e4[m[33m ([m[1;31morigin/alexia_start[m[33m)[m data cleaning in process
+[33m1acaba8[m data cleaning en train detre fait
+[33m480bb63[m adding given grading_test files
+[33mc7da847[m Loading datasets
+[33m13d9ecc[m Refactor loss and gradient functions in implementations.py
+[33m798c819[m added helper functions, adjusted return types and added remaining functions (except logistic regression)(not tested)
+[33m4749d41[m Implement SGD
