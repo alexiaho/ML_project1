@@ -313,10 +313,10 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     Regularized logistic regression using gradient descent
 
     Args :
-        y : shape(N, 1)
-        tx : shape(N, D)
-        initial_w : shape(D, 1)
-        max_inters : int
+        y : shape (N, 1)
+        tx : shape (N, D)
+        initial_w : shape (D, 1)
+        max_iters : int
         gamma : float
 
     Returns :
