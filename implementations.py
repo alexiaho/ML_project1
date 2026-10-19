@@ -332,3 +332,32 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = calculate_loss_logistic(y, tx, w)
 
     return (w, loss)
+
+def sdg_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, batch_size=1):
+    """
+    Stochastic gradient descent for penalized logistic regression
+
+    Args :
+        y : shape (N, 1)
+        tx : shape (N, D)
+        lambda_ : scalar
+        initial_w : shape (D, 1)
+        max_iters : int
+        gamma : float
+        batch_size : int, optional, default=1. The number of data points in a mini-batch used for computing the stochastic gradient
+    Returns :
+        (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
+    """
+    w = initial_w.copy()
+
+    for y_batch, tx_batch in batch_iter(y, tx, batch_size=batch_size, num_batches=max_iters, shuffle=True):
+
+        # Compute a penalized gradient descent
+        _ , w = learning_by_penalized_gradient(
+            y_batch, tx_batch, w, gamma, lambda_=lambda_
+        )
+
+    # Compute loss after final weight update (works also if max_iters == 0)
+    loss = calculate_loss_logistic(y, tx, w)
+
+    return (w, loss)
