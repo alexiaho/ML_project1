@@ -9,9 +9,6 @@ In this repository, you can find:
 - **helpers.py**: This file has all the functions provided by the course.
 - **.gitignore**: 
 
-## The dataset
-- the background of the project 
-
 ## The preprocessing of the data
 - what have we done to the data
 
