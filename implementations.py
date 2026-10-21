@@ -332,3 +332,57 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = calculate_loss_logistic(y, tx, w)
 
     return (w, loss)
+
+
+
+import numpy as np
+
+def one_hot_encode_categorical(x_train, x_test, min_categories=2, max_categories=6):
+    """
+    Safely auto-detects true low-cardinality categorical columns (e.g. scales 1-5, binary 0-1).
+    """
+    x_tr = x_train.copy()
+    x_te = x_test.copy()
+    
+    n_samples, n_features = x_tr.shape
+    categorical_indices = []
+    
+    sample_size = min(5000, n_samples)
+    sample_data = x_tr[:sample_size, :]
+    
+    for i in range(n_features):
+        col_vals = sample_data[:, i]
+        valid_vals = col_vals[~np.isnan(col_vals)]
+        if len(valid_vals) == 0:
+            continue
+        unique_vals = np.unique(valid_vals)
+        
+        # Stricter check: Must be integer-like AND have between 2 and 6 unique values
+        if min_categories <= len(unique_vals) <= max_categories and np.all(unique_vals == unique_vals.astype(int)):
+            categorical_indices.append(i)
+            
+    print(f"Smart-detected {len(categorical_indices)} true categorical columns out of {n_features}.")
+    
+    tr_parts = []
+    te_parts = []
+    
+    for i in range(n_features):
+        if i in categorical_indices:
+            col_tr = x_tr[:, i]
+            col_te = x_te[:, i]
+            
+            col_tr_filled = np.nan_to_num(col_tr, nan=-999)
+            col_te_filled = np.nan_to_num(col_te, nan=-999)
+            
+            categories = np.unique(col_tr_filled)
+            
+            oh_tr = (col_tr_filled[:, None] == categories).astype(float)
+            oh_te = (col_te_filled[:, None] == categories).astype(float)
+            
+            tr_parts.append(oh_tr)
+            te_parts.append(oh_te)
+        else:
+            tr_parts.append(x_tr[:, i:i+1])
+            te_parts.append(x_te[:, i:i+1])
+            
+    return np.hstack(tr_parts), np.hstack(te_parts)
