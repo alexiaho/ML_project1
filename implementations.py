@@ -333,7 +333,6 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
 
     return (w, loss)
 
-
 def preprocess_data(x_train, x_test, nan_threshold=0.90):
     """
     Perform preprocessing on training and testing datasets. Includes filtering Nan values, replacing missing values with column medians (imputation), and scaling.
@@ -404,6 +403,42 @@ def preprocess_data(x_train, x_test, nan_threshold=0.90):
     return x_tr_final, x_te_final
 
 
+def correlation_filtering(x_train, x_test, threshold=0.95):
+    """
+    Filter out features from the training and testing datasets that are highly correlated with each other.
+    
+    Parameters:
+    - x_train: array of training features 
+    - x_test: array of testing features 
+    - threshold: correlation threshold above which features will be removed
+    
+    Returns:
+    - x_train_filtered: filtered training set 
+    - x_test_filtered: filtered test set 
+    """
+    print("--- Starting Correlation Filtering ---")
+    
+    # Compute correlation matrix for training data
+    correlation = np.corrcoef(x_train, rowvar=False)
+    
+    to_remove = set()  # Indices of features to remove
+    n_features = correlation.shape[0]
+
+    for i in range(n_features):
+        for j in range(i + 1, n_features):
+            if abs(correlation[i, j]) > threshold:
+                to_remove.add(j)
+
+    selected_indices = [i for i in range(n_features) if i not in to_remove]
+
+    x_train_filtered = x_train[:, selected_indices]
+    x_test_filtered = x_test[:, selected_indices]
+    
+    print(f"Number of removed features due to high correlation: {len(to_remove)}")
+    print(f"Remaining features after filtering: {x_train_filtered.shape[1]}")
+    print("--- Correlation Filtering Complete ---\n")
+    
+    return x_train_filtered, x_test_filtered
 def weighted_reg_logistic_regression(
     y, tx, lambda_, initial_w, max_iters, gamma
 ):
