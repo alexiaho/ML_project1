@@ -1,6 +1,6 @@
 import numpy as np
 
-
+#used in mean_squared_error_gd and mean_squared_error_sgd
 def compute_loss_mse(y, tx, w):
     """Calculate the loss using MSE.
 
@@ -15,7 +15,7 @@ def compute_loss_mse(y, tx, w):
     e = y - tx @ w
     return 1 / 2 * np.mean(e**2)
 
-
+#used in mean_squared_error_gd and mean_squared_error_sgd
 def compute_gradient(y, tx, w):
     """Computes the gradient at w.
 
@@ -58,7 +58,7 @@ def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma):
 
     return (w, loss)
 
-
+#used in mean_squared_error_sgd
 def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
     """
     Generate a minibatch iterator for a dataset.
@@ -188,9 +188,9 @@ def ridge_regression(y, tx, lambda_):
     loss = compute_loss_mse(y, tx, w)
     return (w, loss)
 
-
-def sigmoid(t):
-    """apply sigmoid function on t.
+#used in calculate_loss_logistic and calculate_gradient_logistic
+def sigmoid(z):
+    """apply sigmoid function on t. Can handle large z without overflow
 
     Args:
         t: scalar or numpy array
@@ -200,8 +200,16 @@ def sigmoid(t):
 
     """
 
-    sigma = 1.0 / (1.0 + np.exp(-t))
-    return sigma
+    z = np.asarray(z)
+    result = np.empty_like(z, dtype=float)
+    
+    positive = z >= 0
+    result[positive] = 1.0 / (1.0 + np.exp(-z[positive]))
+    
+    exp_z = np.exp(z[~positive])
+    result[~positive] = exp_z / (1.0 + exp_z)
+    
+    return result
 
 
 def calculate_loss_logistic(y, tx, w):
@@ -239,27 +247,6 @@ def calculate_gradient_logistic(y, tx, w):
     return grad
 
 
-def learning_by_gradient_descent(y, tx, w, gamma):
-    """
-    Do one step of gradient descent using logistic regression. Return the loss and the updated w.
-
-    Args:
-        y:  shape=(N, 1)
-        tx: shape=(N, D)
-        w:  shape=(D, 1)
-        gamma: float
-
-    Returns:
-        loss: scalar number
-        w: shape=(D, 1)
-    """
-    grad = calculate_gradient_logistic(y, tx, w)
-    loss = calculate_loss_logistic(y, tx, w)
-    w = w - gamma * grad
-
-    return loss, w
-
-
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
     Logistic regression using gradient descent
@@ -278,34 +265,14 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
 
     # Perform gradient descent for max_iters iterations
     for _ in range(max_iters):
-        _, w = learning_by_gradient_descent(y, tx, w, gamma)
+        grad = calculate_gradient_logistic(y, tx, w)
+        w = w - gamma * grad
+        
 
     # Compute loss after final weight update (works also if max_iters == 0)
     loss = calculate_loss_logistic(y, tx, w)
 
     return (w, loss)
-
-
-def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
-    """
-    Do one step of gradient descent, using the penalized logistic regression.
-    Return the loss and updated w.
-
-    Args:
-        y:  shape=(N, 1)
-        tx: shape=(N, D)
-        w:  shape=(D, 1)
-        gamma: scalar
-        lambda_: scalar
-
-    Returns:
-        loss: scalar number
-        w: shape=(D, 1)
-    """
-    loss = calculate_loss_logistic(y, tx, w)
-    gradient = calculate_gradient_logistic(y, tx, w) + 2 * lambda_ * w
-    w = w - gamma * gradient
-    return loss, w
 
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
@@ -326,7 +293,8 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
 
     # Perform penalized gradient descent for max_iters iterations
     for _ in range(max_iters):
-        _, w = learning_by_penalized_gradient(y, tx, w, gamma, lambda_)
+        gradient = calculate_gradient_logistic(y, tx, w) + 2 * lambda_ * w
+        w = w - gamma * gradient
 
     # Compute loss after final weight update (works also if max_iters == 0)
     loss = calculate_loss_logistic(y, tx, w)
@@ -439,10 +407,26 @@ def correlation_filtering(x_train, x_test, threshold=0.95):
     print("--- Correlation Filtering Complete ---\n")
     
     return x_train_filtered, x_test_filtered
+
 def weighted_reg_logistic_regression(
     y, tx, lambda_, initial_w, max_iters, gamma
 ):
-    """Class-weighted regularized logistic regression."""
+    """Class-weighted regularized logistic regression.
+    
+    Args : 
+
+    y : (N,)
+    tx : (N, D)
+    lambda_ : scalar, regularization factor
+    initial_w : (D,) : initial weight vector
+    max_iters : int, number of iterations of the gradient descent
+    gamma : scalar, learning rate
+
+    Returns : 
+
+    w : optimal weight vector
+    loss : loss associated with these weights
+    """
     w = initial_w.copy()
 
     # Calculate weights from the training labels
@@ -457,19 +441,8 @@ def weighted_reg_logistic_regression(
         y == 1, weight_positive, weight_negative
     ).reshape(-1, 1)
 
-    for _ in range(max_iters):
-        probabilities = sigmoid(tx @ w)
-
-        # Weighted logistic gradient
-        gradient = (
-            tx.T @ (sample_weights * (probabilities - y))
-            / len(y)
-        )
-
-        # Regularization, matching your original function
-        gradient += 2 * lambda_ * w
-
-        w = w - gamma * gradient
+    w, _ = reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma)
+    
 
     # Calculate weighted logistic loss safely
     probabilities = np.clip(sigmoid(tx @ w), 1e-15, 1 - 1e-15)
@@ -485,7 +458,18 @@ def weighted_reg_logistic_regression(
 
 
 def make_stratified_folds(y, n_folds=5, seed=42):
-    """Create stratified folds for binary labels encoded as 0 and 1."""
+    """Create stratified folds for binary labels encoded as 0 and 1.
+    
+    Args:
+    
+    y :(N,)
+    n_folds : int, number of folds
+    seed : int, to ensure reproducibility
+    
+    Returns :
+    
+    folds : array of indices"""
+
     y = np.asarray(y).ravel()
     rng = np.random.default_rng(seed)
 
@@ -506,23 +490,8 @@ def make_stratified_folds(y, n_folds=5, seed=42):
 
     return folds
 
-
-
-def sigmoid_safe(z):
-    """Numerically stable sigmoid."""
-    z = np.asarray(z)
-    result = np.empty_like(z, dtype=float)
-
-    positive = z >= 0
-    result[positive] = 1.0 / (1.0 + np.exp(-z[positive]))
-
-    exp_z = np.exp(z[~positive])
-    result[~positive] = exp_z / (1.0 + exp_z)
-
-    return result
-
-
-
+#pas sure du batch size on nous dit 1 dans l'énoncé mais cette fonction est trop bizarre
+#anyways faudra essayer de la réécrire
 def train_logistic_sgd(
     y, X, lambda_=0.0005, learning_rate=0.05,
     epochs=12, batch_size=2048, weighted=False, seed=42
@@ -530,8 +499,18 @@ def train_logistic_sgd(
     """
     Train binary logistic regression using shuffled mini-batch SGD.
 
-    y must contain 0/1 labels.
-    X is expected to include the bias column from preprocess_data.
+    Args : 
+    y : (N,), must contain 0/1 labels.
+    X  : (N, D+1), is expected to include the bias column from preprocess_data.
+    lambda_ : scalar, regularization factor
+    learning_rate : scalar
+    epochs : int, number of passes through training data
+    batch_size : int
+    weighted : bool, weighted version or not
+    seed : int, for reproducibility
+
+    Returns : 
+    w : optimal weights vector
     """
     y = np.asarray(y, dtype=float).reshape(-1, 1)
     X = np.asarray(X, dtype=float)
@@ -568,7 +547,7 @@ def train_logistic_sgd(
             y_batch = y[batch_idx]
             weights_batch = class_weights[batch_idx]
 
-            probabilities = sigmoid_safe(X_batch @ w)
+            probabilities = sigmoid(X_batch @ w)
 
             gradient = (
                 X_batch.T @ (
@@ -586,6 +565,20 @@ def train_logistic_sgd(
 
 
 def calculate_metrics(y_true, probabilities, threshold=0.5):
+    """ Calculates the F1 score, the precision, the recall and the accuracy of the model
+
+    Args :
+    y_true : (N,), actual values of y for the test set
+    probabilities : (N ,), probabilities resulting of the logistic regression
+    threshold : scalar
+
+    Returns :
+    F1 : scalar
+    Precision : scalar
+    Recall : scalar
+    Accuracy : scalar
+    
+    """
     y_true = np.asarray(y_true).ravel()
     y_pred = (probabilities >= threshold).astype(int)
 
@@ -611,6 +604,16 @@ def calculate_metrics(y_true, probabilities, threshold=0.5):
 
 
 def find_best_threshold(y_true, probabilities):
+    """Compares different threshold and finds the best one
+    
+    Args:
+    y_true : (N,), actual values of y for the test set
+    probabilities : (N ,), probabilities resulting of the logistic regression
+
+    Returns : 
+
+    results : the different thresholds and their corresponding metrics, sorted by highest F1 score
+    """
     thresholds = np.arange(0.05, 0.801, 0.01)
     results = []
 
