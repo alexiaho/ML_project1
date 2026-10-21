@@ -333,7 +333,9 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
 
     return (w, loss)
 
-def sdg_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, batch_size=1):
+
+
+def sdg_reg_logistic_regression(y, tx, lambda_, initial_w, num_epochs, gamma, batch_size=1):
     """
     Stochastic gradient descent for penalized logistic regression
 
@@ -349,14 +351,24 @@ def sdg_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, bat
         (w, loss): last weight vector of the method, and the corresponding loss value (cost function)
     """
     w = initial_w.copy()
+    n_samples = len(y)
 
-    for y_batch, tx_batch in batch_iter(y, tx, batch_size=batch_size, num_batches=max_iters, shuffle=True):
+    for _ in range(num_epochs):
+        shuffled_indices = np.random.permutation(n_samples)
 
-        # Compute a penalized gradient descent
-        _ , w = learning_by_penalized_gradient(
-            y_batch, tx_batch, w, gamma, lambda_=lambda_
-        )
+        for start in range(0, n_samples, batch_size):
+            batch_indices = shuffled_indices[start:start + batch_size]
 
+            y_batch = y[batch_indices]
+            tx_batch = tx[batch_indices]
+
+            _, w = learning_by_penalized_gradient(
+                y_batch,
+                tx_batch,
+                w,
+                gamma,
+                lambda_,
+            )
     # Compute loss after final weight update (works also if max_iters == 0)
     loss = calculate_loss_logistic(y, tx, w)
 
