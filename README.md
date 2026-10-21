@@ -10,7 +10,13 @@ In this repository, you can find:
 - **.gitignore**: 
 
 ## The preprocessing of the data
-- what have we done to the data
+We preprocess the data by:
+- removing the features for which 90% or more of the data were NaN
+- 
 
 ## The models implemented 
-- the chosen models
+We implemented a Logistic Regression model trained using Stochastic Gradient Descent (SGD) and evaluated via k-fold cross-validation.
+
+## Reproduce the best submission:
+To reproduce the submission 
+
