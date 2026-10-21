@@ -2,12 +2,12 @@
 
 ## The content:
 In this repository, you can find:
-- **run.ipynb**: This Jupyter Notebook contains the preprocessing, the models fitting, etc.
+- **run.ipynb**: This Jupyter Notebook contains the preprocessing, the models fitting, etc. It is made so our results can be reproducible.
 - **data analysis**: The first glance at the dataset to determine the best way to preprocess it.
 - **environment.yml**: Which is the environment used to make this project.
 - **implementation.py**: This python script has all the functions implemented for this project.
 - **helpers.py**: This file has all the functions provided by the course.
-- **gitignore**:
+- **.gitignore**: 
 
 ## The dataset
 - the background of the project 
