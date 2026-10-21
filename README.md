@@ -1,5 +1,5 @@
 # Project 1 of the course ML :) 
-
+### Predicting coronary heart disease (MICDH) with dataset from Behavioral Risk Factor Surveillance System. (from a phonecall to a diagnostic...)
 ## The content:
 In this repository, you can find:
 - **run.ipynb**: This Jupyter Notebook contains the preprocessing, the models fitting, etc. It is made so our results can be reproducible.
