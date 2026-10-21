@@ -332,3 +332,73 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = calculate_loss_logistic(y, tx, w)
 
     return (w, loss)
+
+
+def preprocess_data(x_train, x_test, nan_threshold=0.90):
+    """
+    Perform preprocessing on training and testing datasets. Includes filtering Nan values, replacing missing values with column medians (imputation), and scaling.
+    
+    Parameters:
+    - x_train: array of raw training features 
+    - x_test: array of raw testing features 
+    - nan_threshold: column NaN percentage limit to keep (e.g. 0.90 = keep if <= 90% NaN)
+    
+    Returns:
+    - x_train_final: filtered, imputed and scaled training set 
+    - x_test_final: filtered, imputed and scaled test set 
+    """
+    print("--- Starting Preprocessing ---")
+    
+    # 1. Remove columns with high NaN ratios (> nan_threshold)
+    nan_ratios_columns = np.isnan(x_train).mean(axis=0)
+    columns_to_keep = nan_ratios_columns <= nan_threshold
+    
+    x_tr_filtered = x_train[:, columns_to_keep].copy()
+    x_te_filtered = x_test[:, columns_to_keep].copy()
+
+    nb_columns_removed = np.sum(~columns_to_keep) # The ~ operator performs a logical NOT on Boolean values --> False becomes True and vice vera
+    percentage_nan_threshold = nan_threshold * 100
+
+    print(f'Number of removed columns with >{percentage_nan_threshold:.0f}% NaNs: {nb_columns_removed}')
+    print(f'Remaining features: {x_tr_filtered.shape[1]}')
+    
+    # 2. Replace NaN values by column median values
+    train_medians = np.nanmedian(x_tr_filtered, axis=0) # computes median along axis=0, ignoring existing NaN values 
+
+    # Scans the array of computed medians and converts any NaN values to 0.0
+    train_medians = np.nan_to_num(train_medians, nan=0.0) 
+    
+    for col_idx in range(x_tr_filtered.shape[1]):
+        # Replaces missing values in training set with corresponding column median
+        train_nan = np.isnan(x_tr_filtered[:, col_idx])
+        x_tr_filtered[train_nan, col_idx] = train_medians[col_idx]
+        
+        # Replaces missing values in testing set with corresponding column median from training set 
+        test_nan = np.isnan(x_te_filtered[:, col_idx])
+        x_te_filtered[test_nan, col_idx] = train_medians[col_idx]
+        
+    print("Missing values replaced using medians from the training set.")
+    
+    # 3. Standardization (Z-score normalization)
+    mean = np.mean(x_tr_filtered, axis=0)
+    std = np.std(x_tr_filtered, axis=0)
+    
+    # Special case: division by zero --> std replaced by 1.0 for constant columns
+    std[std == 0] = 1.0
+    
+    x_tr_normalized = (x_tr_filtered - mean) / std
+    x_te_normalized = (x_te_filtered - mean) / std
+    print("Features standardized (zero mean, unit variance).")
+    
+    # 4. Add a column of 1s at the beginning for the bias weight (w_0)
+    bias_train = np.ones((x_tr_normalized.shape[0], 1))
+    bias_test = np.ones((x_te_normalized.shape[0], 1))
+    
+    x_tr_final = np.hstack((bias_train, x_tr_normalized))
+    x_te_final = np.hstack((bias_test, x_te_normalized))
+    
+    print(f"Final processed training shape: {x_tr_final.shape}")
+    print(f"Final processed testing shape: {x_te_final.shape}")
+    print("--- Preprocessing Complete ---\n")
+    
+    return x_tr_final, x_te_final
