@@ -18,5 +18,5 @@ We preprocess the data by:
 We implemented a Logistic Regression model trained using Stochastic Gradient Descent (SGD) and evaluated via k-fold cross-validation.
 
 ## Reproduce the best submission:
-To reproduce the submission 
+To reproduce the best submission, run run.ipynb
 
