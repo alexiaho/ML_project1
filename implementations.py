@@ -332,3 +332,261 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = calculate_loss_logistic(y, tx, w)
 
     return (w, loss)
+
+
+def preprocess_data(x_train, x_test, nan_threshold=0.90):
+    """
+    Perform preprocessing on training and testing datasets. Includes filtering Nan values, replacing missing values with column medians (imputation), and scaling.
+    
+    Parameters:
+    - x_train: array of raw training features 
+    - x_test: array of raw testing features 
+    - nan_threshold: column NaN percentage limit to keep (e.g. 0.90 = keep if <= 90% NaN)
+    
+    Returns:
+    - x_train_final: filtered, imputed and scaled training set 
+    - x_test_final: filtered, imputed and scaled test set 
+    """
+    print("--- Starting Preprocessing ---")
+    
+    # 1. Remove columns with high NaN ratios (> nan_threshold)
+    nan_ratios_columns = np.isnan(x_train).mean(axis=0)
+    columns_to_keep = nan_ratios_columns <= nan_threshold
+    
+    x_tr_filtered = x_train[:, columns_to_keep].copy()
+    x_te_filtered = x_test[:, columns_to_keep].copy()
+
+    nb_columns_removed = np.sum(~columns_to_keep) # The ~ operator performs a logical NOT on Boolean values --> False becomes True and vice vera
+    percentage_nan_threshold = nan_threshold * 100
+
+    print(f'Number of removed columns with >{percentage_nan_threshold:.0f}% NaNs: {nb_columns_removed}')
+    print(f'Remaining features: {x_tr_filtered.shape[1]}')
+    
+    # 2. Replace NaN values by column median values
+    train_medians = np.nanmedian(x_tr_filtered, axis=0) # computes median along axis=0, ignoring existing NaN values 
+
+    # Scans the array of computed medians and converts any NaN values to 0.0
+    train_medians = np.nan_to_num(train_medians, nan=0.0) 
+    
+    for col_idx in range(x_tr_filtered.shape[1]):
+        # Replaces missing values in training set with corresponding column median
+        train_nan = np.isnan(x_tr_filtered[:, col_idx])
+        x_tr_filtered[train_nan, col_idx] = train_medians[col_idx]
+        
+        # Replaces missing values in testing set with corresponding column median from training set 
+        test_nan = np.isnan(x_te_filtered[:, col_idx])
+        x_te_filtered[test_nan, col_idx] = train_medians[col_idx]
+        
+    print("Missing values replaced using medians from the training set.")
+    
+    # 3. Standardization (Z-score normalization)
+    mean = np.mean(x_tr_filtered, axis=0)
+    std = np.std(x_tr_filtered, axis=0)
+    
+    # Special case: division by zero --> std replaced by 1.0 for constant columns
+    std[std == 0] = 1.0
+    
+    x_tr_normalized = (x_tr_filtered - mean) / std
+    x_te_normalized = (x_te_filtered - mean) / std
+    print("Features standardized (zero mean, unit variance).")
+    
+    # 4. Add a column of 1s at the beginning for the bias weight (w_0)
+    bias_train = np.ones((x_tr_normalized.shape[0], 1))
+    bias_test = np.ones((x_te_normalized.shape[0], 1))
+    
+    x_tr_final = np.hstack((bias_train, x_tr_normalized))
+    x_te_final = np.hstack((bias_test, x_te_normalized))
+    
+    print(f"Final processed training shape: {x_tr_final.shape}")
+    print(f"Final processed testing shape: {x_te_final.shape}")
+    print("--- Preprocessing Complete ---\n")
+    
+    return x_tr_final, x_te_final
+
+
+def weighted_reg_logistic_regression(
+    y, tx, lambda_, initial_w, max_iters, gamma
+):
+    """Class-weighted regularized logistic regression."""
+    w = initial_w.copy()
+
+    # Calculate weights from the training labels
+    negative_rate = np.mean(y.ravel() == 0)
+    positive_rate = np.mean(y.ravel() == 1)
+
+    weight_negative = 1.0 / (2 * negative_rate)
+    weight_positive = 1.0 / (2 * positive_rate)
+
+    # Give each training example its class weight
+    sample_weights = np.where(
+        y == 1, weight_positive, weight_negative
+    ).reshape(-1, 1)
+
+    for _ in range(max_iters):
+        probabilities = sigmoid(tx @ w)
+
+        # Weighted logistic gradient
+        gradient = (
+            tx.T @ (sample_weights * (probabilities - y))
+            / len(y)
+        )
+
+        # Regularization, matching your original function
+        gradient += 2 * lambda_ * w
+
+        w = w - gamma * gradient
+
+    # Calculate weighted logistic loss safely
+    probabilities = np.clip(sigmoid(tx @ w), 1e-15, 1 - 1e-15)
+
+    loss = -np.mean(
+        sample_weights * (
+            y * np.log(probabilities)
+            + (1 - y) * np.log(1 - probabilities)
+        )
+    ) + lambda_ * np.sum(w**2)
+
+    return w, loss
+
+
+def make_stratified_folds(y, n_folds=5, seed=42):
+    """Create stratified folds for binary labels encoded as 0 and 1."""
+    y = np.asarray(y).ravel()
+    rng = np.random.default_rng(seed)
+
+    class_indices = []
+    for label in (0, 1):
+        indices = np.flatnonzero(y == label)
+        rng.shuffle(indices)
+        class_indices.append(np.array_split(indices, n_folds))
+
+    folds = []
+    for k in range(n_folds):
+        fold_indices = np.concatenate([
+            class_indices[0][k],
+            class_indices[1][k]
+        ])
+        rng.shuffle(fold_indices)
+        folds.append(fold_indices)
+
+    return folds
+
+
+
+def sigmoid_safe(z):
+    """Numerically stable sigmoid."""
+    z = np.asarray(z)
+    result = np.empty_like(z, dtype=float)
+
+    positive = z >= 0
+    result[positive] = 1.0 / (1.0 + np.exp(-z[positive]))
+
+    exp_z = np.exp(z[~positive])
+    result[~positive] = exp_z / (1.0 + exp_z)
+
+    return result
+
+
+
+def train_logistic_sgd(
+    y, X, lambda_=0.0005, learning_rate=0.05,
+    epochs=12, batch_size=2048, weighted=False, seed=42
+):
+    """
+    Train binary logistic regression using shuffled mini-batch SGD.
+
+    y must contain 0/1 labels.
+    X is expected to include the bias column from preprocess_data.
+    """
+    y = np.asarray(y, dtype=float).reshape(-1, 1)
+    X = np.asarray(X, dtype=float)
+
+    n_samples, n_features = X.shape
+    w = np.zeros((n_features, 1))
+
+    if weighted:
+        negative_rate = np.mean(y.ravel() == 0)
+        positive_rate = np.mean(y.ravel() == 1)
+
+        class_weights = np.where(
+            y == 1,
+            1.0 / (2.0 * positive_rate),
+            1.0 / (2.0 * negative_rate)
+        )
+    else:
+        class_weights = np.ones_like(y)
+
+    # Avoid regularizing the final bias column.
+    regularization_mask = np.ones((n_features, 1))
+    regularization_mask[-1, 0] = 0.0
+
+    rng = np.random.default_rng(seed)
+
+    for epoch in range(epochs):
+        shuffled_indices = rng.permutation(n_samples)
+        current_lr = learning_rate / (1.0 + 0.1 * epoch)
+
+        for start in range(0, n_samples, batch_size):
+            batch_idx = shuffled_indices[start:start + batch_size]
+
+            X_batch = X[batch_idx]
+            y_batch = y[batch_idx]
+            weights_batch = class_weights[batch_idx]
+
+            probabilities = sigmoid_safe(X_batch @ w)
+
+            gradient = (
+                X_batch.T @ (
+                    weights_batch * (probabilities - y_batch)
+                ) / len(batch_idx)
+            )
+
+            gradient += (
+                2.0 * lambda_ * regularization_mask * w
+            )
+
+            w -= current_lr * gradient
+
+    return w
+
+
+def calculate_metrics(y_true, probabilities, threshold=0.5):
+    y_true = np.asarray(y_true).ravel()
+    y_pred = (probabilities >= threshold).astype(int)
+
+    tp = np.sum((y_true == 1) & (y_pred == 1))
+    fp = np.sum((y_true == 0) & (y_pred == 1))
+    fn = np.sum((y_true == 1) & (y_pred == 0))
+    tn = np.sum((y_true == 0) & (y_pred == 0))
+
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if precision + recall else 0.0
+    )
+    accuracy = (tp + tn) / len(y_true)
+
+    return {
+        "F1": f1,
+        "Precision": precision,
+        "Recall": recall,
+        "Accuracy": accuracy
+    }
+
+
+def find_best_threshold(y_true, probabilities):
+    thresholds = np.arange(0.05, 0.801, 0.01)
+    results = []
+
+    for threshold in thresholds:
+        metrics = calculate_metrics(
+            y_true, probabilities, threshold
+        )
+        results.append({
+            "Threshold": round(float(threshold), 2),
+            **metrics
+        })
+
+    results.sort(key=lambda row: row["F1"], reverse=True)
+    return results
