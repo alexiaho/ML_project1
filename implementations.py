@@ -235,7 +235,7 @@ def calculate_gradient_logistic(y, tx, w):
     Returns:
         a vector of shape (D, 1)
     """
-    grad = 1 / y.shape[0] * tx.T @ (sigmoid(tx @ w) - y)
+    grad = tx.T @ (sigmoid(tx @ w) - y) / y.shape[0]
     return grad
 
 
@@ -333,9 +333,49 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
 
     return (w, loss)
 
+def weighted_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
+    """Class-weighted regularized logistic regression (gradient descent).
 
+    Works with 1-D arrays (as required by the project) and also with (N,1)/(D,1)
+    column vectors: everything is handled as 1-D internally, and w is returned
+    with the same shape as initial_w.
+    """
+    y = np.asarray(y).ravel()                      # (N,)
+    w = np.asarray(initial_w, dtype=float).ravel()  # (D,)
 
-import numpy as np
+    # Calculate weights from the training labels
+    negative_rate = np.mean(y == 0)
+    positive_rate = np.mean(y == 1)
+
+    weight_negative = 1.0 / (2 * negative_rate)
+    weight_positive = 1.0 / (2 * positive_rate)
+
+    # Give each training example its class weight
+    sample_weights = np.where(y == 1, weight_positive, weight_negative)  # (N,)
+
+    for _ in range(max_iters):
+        probabilities = sigmoid(tx @ w)
+
+        # Weighted logistic gradient
+        gradient = tx.T @ (sample_weights * (probabilities - y)) / len(y)
+
+        # Regularization, matching reg_logistic_regression
+        gradient += 2 * lambda_ * w
+
+        w = w - gamma * gradient
+
+    # Calculate weighted logistic loss safely
+    probabilities = np.clip(sigmoid(tx @ w), 1e-15, 1 - 1e-15)
+
+    loss = -np.mean(
+        sample_weights * (
+            y * np.log(probabilities)
+            + (1 - y) * np.log(1 - probabilities)
+        )
+    ) + lambda_ * np.sum(w**2)
+
+    return w.reshape(np.shape(initial_w)), loss
+
 
 def one_hot_encode_categorical(x_train, x_test, min_categories=2, max_categories=6):
     """
@@ -386,3 +426,143 @@ def one_hot_encode_categorical(x_train, x_test, min_categories=2, max_categories
             te_parts.append(x_te[:, i:i+1])
             
     return np.hstack(tr_parts), np.hstack(te_parts)
+
+
+def calculate_metrics(y_true, probabilities, threshold=0.5):
+    y_true = np.asarray(y_true).ravel()
+    y_pred = (probabilities >= threshold).astype(int)
+
+    tp = np.sum((y_true == 1) & (y_pred == 1))
+    fp = np.sum((y_true == 0) & (y_pred == 1))
+    fn = np.sum((y_true == 1) & (y_pred == 0))
+    tn = np.sum((y_true == 0) & (y_pred == 0))
+
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if precision + recall else 0.0
+    )
+    accuracy = (tp + tn) / len(y_true)
+
+    return {
+        "F1": f1,
+        "Precision": precision,
+        "Recall": recall,
+        "Accuracy": accuracy
+    }
+
+
+def find_best_threshold(y_true, probabilities, decision_thresholds):
+    results = []
+
+    for threshold in decision_thresholds:
+        metrics = calculate_metrics(
+            y_true, probabilities, threshold
+        )
+        results.append({
+            "Threshold": round(float(threshold), 2),
+            **metrics
+        })
+
+    results.sort(key=lambda row: row["F1"], reverse=True)
+    return results
+
+
+def make_stratified_folds(y, n_folds=5, seed=42):
+    """Create stratified folds for binary labels encoded as 0 and 1."""
+    y = np.asarray(y).ravel()
+    rng = np.random.default_rng(seed)
+
+    class_indices = []
+    for label in (0, 1):
+        indices = np.flatnonzero(y == label)
+        rng.shuffle(indices)
+        class_indices.append(np.array_split(indices, n_folds))
+
+    folds = []
+    for k in range(n_folds):
+        fold_indices = np.concatenate([
+            class_indices[0][k],
+            class_indices[1][k]
+        ])
+        rng.shuffle(fold_indices)
+        folds.append(fold_indices)
+
+    return folds
+
+
+def sigmoid_safe(z):
+    """Numerically stable sigmoid."""
+    z = np.asarray(z)
+    result = np.empty_like(z, dtype=float)
+
+    positive = z >= 0
+    result[positive] = 1.0 / (1.0 + np.exp(-z[positive]))
+
+    exp_z = np.exp(z[~positive])
+    result[~positive] = exp_z / (1.0 + exp_z)
+
+    return result
+
+
+def train_logistic_sgd(
+    y, X, lambda_=0.0005, learning_rate=0.05,
+    epochs=12, batch_size=2048, weighted=False, seed=42
+):
+    """
+    Train binary logistic regression using shuffled mini-batch SGD.
+
+    y must contain 0/1 labels.
+    X is expected to include the bias column (first column) from preprocess_data.
+    """
+    y = np.asarray(y, dtype=float).reshape(-1, 1)
+    X = np.asarray(X, dtype=float)
+
+    n_samples, n_features = X.shape
+    w = np.zeros((n_features, 1))
+
+    if weighted:
+        negative_rate = np.mean(y.ravel() == 0)
+        positive_rate = np.mean(y.ravel() == 1)
+
+        class_weights = np.where(
+            y == 1,
+            1.0 / (2.0 * positive_rate),
+            1.0 / (2.0 * negative_rate)
+        )
+    else:
+        class_weights = np.ones_like(y)
+
+    # Avoid regularizing the bias column (first column, added in preprocess_data).
+    regularization_mask = np.ones((n_features, 1))
+    regularization_mask[0, 0] = 0.0
+
+    rng = np.random.default_rng(seed)
+
+    for epoch in range(epochs):
+        shuffled_indices = rng.permutation(n_samples)
+        current_lr = learning_rate / (1.0 + 0.1 * epoch)
+
+        for start in range(0, n_samples, batch_size):
+            batch_idx = shuffled_indices[start:start + batch_size]
+
+            X_batch = X[batch_idx]
+            y_batch = y[batch_idx]
+            weights_batch = class_weights[batch_idx]
+
+            probabilities = sigmoid_safe(X_batch @ w)
+
+            gradient = (
+                X_batch.T @ (
+                    weights_batch * (probabilities - y_batch)
+                ) / len(batch_idx)
+            )
+
+            gradient += (
+                2.0 * lambda_ * regularization_mask * w
+            )
+
+            w -= current_lr * gradient
+
+    return w
