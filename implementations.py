@@ -428,7 +428,97 @@ def one_hot_encode_categorical(x_train, x_test, min_categories=2, max_categories
     return np.hstack(tr_parts), np.hstack(te_parts)
 
 
+def preprocess_data(x_train, x_test, nan_threshold=0.90):
+    """
+    Perform preprocessing on training and testing datasets. 
+    Includes:
+     1. Removing columns with excessive Nan values.
+     2. One-hot encoding of categorical features
+     3. Replacing missing values with column medians (median imputation).
+     4. Z-score standardization.
+     5. Adding bias column of ones.
+    
+    Parameters:
+    - x_train: array of raw training features 
+    - x_test: array of raw testing features 
+    - nan_threshold: column NaN percentage limit to keep (e.g. 0.90 = keep if <= 90% NaN)
+    
+    Returns:
+    - x_train_final: filtered, imputed and scaled training set 
+    - x_test_final: filtered, imputed and scaled test set 
+    """
+    print("--- Starting Preprocessing ---")
+    
+    # 1. Remove columns with high NaN ratios (> nan_threshold)
+    nan_ratios_columns = np.isnan(x_train).mean(axis=0)
+    columns_to_keep = nan_ratios_columns <= nan_threshold
+    
+    x_tr_filtered = x_train[:, columns_to_keep].copy()
+    x_te_filtered = x_test[:, columns_to_keep].copy()
+
+    nb_columns_removed = np.sum(~columns_to_keep) # The ~ operator performs a logical NOT on Boolean values --> False becomes True and vice vera
+    percentage_nan_threshold = nan_threshold * 100
+
+    print(f'Number of removed columns with >{percentage_nan_threshold:.0f}% NaNs: {nb_columns_removed}')
+    print(f'Remaining features: {x_tr_filtered.shape[1]}')
+
+    # 2. One-hot encode categorical features first (or right after filtering)
+    x_tr_encoded, x_te_encoded = one_hot_encode_categorical(x_tr_filtered, x_te_filtered)
+    print(f'Features shape after one-hot encoding: {x_tr_encoded.shape[1]}')
+    
+    # 3. Replace NaN values by column median values (operating on the encoded arrays)
+    train_medians = np.nanmedian(x_tr_encoded, axis=0) 
+    train_medians = np.nan_to_num(train_medians, nan=0.0) 
+    
+    for col_idx in range(x_tr_encoded.shape[1]):  # all ENCODED columns
+        # Replaces missing values in training set with corresponding column median
+        train_nan = np.isnan(x_tr_encoded[:, col_idx])
+        x_tr_encoded[train_nan, col_idx] = train_medians[col_idx]  # was x_tr_filtered: NaNs stayed in x_tr_encoded
+        
+        # Replaces missing values in testing set with corresponding column median from training set 
+        test_nan = np.isnan(x_te_encoded[:, col_idx])
+        x_te_encoded[test_nan, col_idx] = train_medians[col_idx]  # was x_te_filtered
+        
+    print("Missing values replaced using medians from the training set.")
+    assert not np.isnan(x_tr_encoded).any() and not np.isnan(x_te_encoded).any(), "NaNs left after imputation"
+    
+    # 4. Standardization (Z-score normalization)
+    mean = np.mean(x_tr_encoded, axis=0)
+    std = np.std(x_tr_encoded, axis=0)
+    
+    # Special case: division by zero --> std replaced by 1.0 for constant columns
+    std[std == 0] = 1.0
+    
+    x_tr_normalized = (x_tr_encoded - mean) / std
+    x_te_normalized = (x_te_encoded - mean) / std
+    print("Features standardized (zero mean, unit variance).")
+    
+    # 5. Add a column of 1s at the beginning for the bias weight (w_0)
+    bias_train = np.ones((x_tr_normalized.shape[0], 1))
+    bias_test = np.ones((x_te_normalized.shape[0], 1))
+    
+    x_tr_final = np.hstack((bias_train, x_tr_normalized))
+    x_te_final = np.hstack((bias_test, x_te_normalized))
+    
+    print(f"Final processed training shape: {x_tr_final.shape}")
+    print(f"Final processed testing shape: {x_te_final.shape}")
+    print("--- Preprocessing Complete ---\n")
+    
+    return x_tr_final, x_te_final
+
+def print_best_thresholds(results, n=5):
+    """Print the n best rows returned by find_best_threshold."""
+    print("F1       Threshold  Precision  Recall  Accuracy")
+    for row in results[:n]:
+        print(
+            f'{row["F1"]:.4f}   {row["Threshold"]:.2f}       '
+            f'{row["Precision"]:.4f}     {row["Recall"]:.4f}  {row["Accuracy"]:.4f}'
+        )
+
 def calculate_metrics(y_true, probabilities, threshold=0.5):
+    """
+    """
+    
     y_true = np.asarray(y_true).ravel()
     y_pred = (probabilities >= threshold).astype(int)
 
@@ -467,6 +557,40 @@ def find_best_threshold(y_true, probabilities, decision_thresholds):
 
     results.sort(key=lambda row: row["F1"], reverse=True)
     return results
+
+def train_and_evaluate(x_tune, y_tune, x_val, y_val,
+    lambda_, lr, checkpoints, weighted=False
+):
+    """Gradient descent, evaluated on the validation set after each number of iterations in `checkpoints`.
+
+    Returns the list of results (best threshold, F1, ...) and the final weights.
+    """
+    train_fn = weighted_reg_logistic_regression if weighted else reg_logistic_regression
+    w = np.zeros(x_tune.shape[1])
+    done, rows = 0, []
+    for n_iter in checkpoints:
+        with np.errstate(all="ignore"):      # exp() overflow just saturates the sigmoid
+            w, _ = train_fn(y_tune, x_tune, lambda_, w, n_iter - done, lr)   # continue from w
+        done = n_iter
+        probs = sigmoid_safe(x_val @ w)
+        best = find_best_threshold(y_val_bin, probs, decision_thresholds)[0]   # best threshold by F1
+        best["F1 @ 0.5"] = calculate_metrics(y_val_bin, probs, 0.5)["F1"]
+        best["Iterations"] = n_iter
+        rows.append(best)
+    return rows, w
+
+
+def print_grid(title, curves):
+    """curves: {parameter value: list of results over the iteration checkpoints}"""
+    print(title)
+    print(f'{"":<9}' + "".join(f"{n:>9}" for n in iteration_checkpoints) + "    <- iterations")
+    for param, rows in curves.items():
+        print(f"{param:<9}" + "".join(f'{r["F1"]:>9.4f}' for r in rows))
+
+
+def best_of(curves):
+    """(parameter value, result row) with the highest validation F1."""
+    return max(((p, r) for p, rows in curves.items() for r in rows), key=lambda t: t[1]["F1"])
 
 
 def make_stratified_folds(y, n_folds=5, seed=42):

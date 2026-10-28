@@ -376,8 +376,6 @@ def weighted_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma
     return w, loss
 
 
-
-
 def one_hot_encode_categorical(x_train, x_test, min_categories=2, max_categories=6):
     """
     Safely auto-detects true low-cardinality categorical columns (e.g. scales 1-5, binary 0-1).
