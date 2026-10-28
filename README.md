@@ -22,5 +22,5 @@ We preprocess the data by:
 We implemented a Logistic Regression model trained using Stochastic Gradient Descent (SGD) and evaluated via k-fold cross-validation.
 
 ## Reproduce the best submission:
-To reproduce the best submission, get the environment from **environment.yml** and then run **run.ipynb**. 
+To reproduce the best submission, get the environment from **environment.yml**, download the dataset from the GitHub of the course:https://github.com/epfml/ML_course.git under project1 and then run **run.ipynb**. 
 
