@@ -44,7 +44,7 @@ To reproduce the best submission,
 2. Document preprocessing assumptions and fit preprocessing on training partitions only.
 3. Run the holdout experiments as exploratory comparisons.
 4. Compare the candidate SGD variants using the same stratified five-fold splits and collect out-of-fold probabilities.
-5. Select the model variant and decision threshold, refit on all labeled data, and generate `submission.csv`.
+5. Select the model variant and decision threshold, refit on all labeled data, and generate `gd_logistic_submission.csv`.
 6. Summarize baselines, the most impactful ablations, metrics, and limitations in the report.
 
 
