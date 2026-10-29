@@ -24,7 +24,7 @@ ML_project1/
 
 ## The preprocessing of the data
 We preprocess the data by:
-- removing the features for which 90% or more of the data were NaN
+- removing the features for which 90%, 80%, 70% or more of the data were NaN (tried many thresholds)
 - removing the useless feature for this prediction, like the phone number 
 - one hot encoding 
 - removing correlated features to reduce the amount of redundancy in the dataset
