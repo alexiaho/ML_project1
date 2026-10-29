@@ -16,7 +16,7 @@ ML_project1/
 ├── gd_logistic_submission.csv            # The best submission
 ├── grading_tests           # The original folder from the instructions given at the beginning of this project.
 ├── .gitignore
-└── report.pdf                # maximum two pages (references may use page 3)
+└── report_project1_ml.pdf                # maximum two pages (references may use page 3)
 
 ```
 ## Reproduce the best submission:
