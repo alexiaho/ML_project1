@@ -344,6 +344,127 @@ def weighted_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma
 
     return w.reshape(np.shape(initial_w)), loss
 
+def correlation_filtering(x_train, x_test, threshold=0.95):
+    """
+    Filter out features from the training and testing datasets that are highly correlated with each other.
+    
+    Parameters:
+    - x_train: array of training features 
+    - x_test: array of testing features 
+    - threshold: correlation threshold above which features will be removed
+    
+    Returns:
+    - x_train_filtered: filtered training set 
+    - x_test_filtered: filtered test set 
+    """
+    print("--- Starting Correlation Filtering ---")
+    
+    # Compute correlation matrix for training data
+    correlation = np.corrcoef(x_train, rowvar=False)
+    
+    to_remove = set()  # Indices of features to remove
+    n_features = correlation.shape[0]
+
+    for i in range(n_features):
+        for j in range(i + 1, n_features):
+            if abs(correlation[i, j]) > threshold:
+                to_remove.add(j)
+
+    selected_indices = [i for i in range(n_features) if i not in to_remove]
+
+    x_train_filtered = x_train[:, selected_indices]
+    x_test_filtered = x_test[:, selected_indices]
+    
+    print(f"Number of removed features due to high correlation: {len(to_remove)}")
+    print(f"Remaining features after filtering: {x_train_filtered.shape[1]}")
+    print("--- Correlation Filtering Complete ---\n")
+    
+    return x_train_filtered, x_test_filtered
+
+def preprocess_data(x_train, x_test, nan_threshold=0.90):
+    """
+    Perform preprocessing on training and testing datasets. 
+    Includes:
+     1. Removing columns with excessive Nan values.
+     2. One-hot encoding of categorical features
+     3. Replacing missing values with column medians (median imputation).
+     4. Z-score standardization.
+     5. Adding bias column of ones.
+    
+    Parameters:
+    - x_train: array of raw training features 
+    - x_test: array of raw testing features 
+    - nan_threshold: column NaN percentage limit to keep (e.g. 0.90 = keep if <= 90% NaN)
+    
+    Returns:
+    - x_train_final: filtered, imputed and scaled training set 
+    - x_test_final: filtered, imputed and scaled test set 
+    """
+    print("--- Starting Preprocessing ---")
+    
+    # 1. Remove columns with high NaN ratios (> nan_threshold)
+    remove_indices = [1, 2, 3, 4, 5, 13, 19] # Indices of columns that are not useful to predict the target variable (e.g. ID, timestamp, etc.)
+    x_train = np.delete(x_train, remove_indices, axis=1)
+    x_test = np.delete(x_test, remove_indices, axis=1) 
+    
+    nan_ratios_columns = np.isnan(x_train).mean(axis=0)
+    columns_to_keep = nan_ratios_columns <= nan_threshold
+    
+    x_tr_filtered = x_train[:, columns_to_keep].copy()
+    x_te_filtered = x_test[:, columns_to_keep].copy()
+
+    nb_columns_removed = np.sum(~columns_to_keep) # The ~ operator performs a logical NOT on Boolean values --> False becomes True and vice vera
+    percentage_nan_threshold = nan_threshold * 100
+
+    print(f'Number of removed columns with >{percentage_nan_threshold:.0f}% NaNs: {nb_columns_removed}')
+    print(f'Remaining features: {x_tr_filtered.shape[1]}')
+
+    # 2. One-hot encode categorical features first (or right after filtering)
+    x_tr_encoded, x_te_encoded = one_hot_encode_categorical(x_tr_filtered, x_te_filtered)
+    print(f'Features shape after one-hot encoding: {x_tr_encoded.shape[1]}')
+    
+    # 3. Replace NaN values by column median values (operating on the encoded arrays)
+    train_medians = np.nanmedian(x_tr_encoded, axis=0) 
+    train_medians = np.nan_to_num(train_medians, nan=0.0) 
+    
+    for col_idx in range(x_tr_encoded.shape[1]):  # all ENCODED columns
+        # Replaces missing values in training set with corresponding column median
+        train_nan = np.isnan(x_tr_encoded[:, col_idx])
+        x_tr_encoded[train_nan, col_idx] = train_medians[col_idx]  # was x_tr_filtered: NaNs stayed in x_tr_encoded
+        
+        # Replaces missing values in testing set with corresponding column median from training set 
+        test_nan = np.isnan(x_te_encoded[:, col_idx])
+        x_te_encoded[test_nan, col_idx] = train_medians[col_idx]  # was x_te_filtered
+        
+    print("Missing values replaced using medians from the training set.")
+    assert not np.isnan(x_tr_encoded).any() and not np.isnan(x_te_encoded).any(), "NaNs left after imputation"
+    
+    # 3. Standardization (Z-score normalization)
+    mean = np.mean(x_tr_encoded, axis=0)
+    std = np.std(x_tr_encoded, axis=0)
+    
+    # Special case: division by zero --> std replaced by 1.0 for constant columns
+    std[std == 0] = 1.0
+    
+    x_tr_normalized = (x_tr_encoded - mean) / std
+    x_te_normalized = (x_te_encoded - mean) / std
+    print("Features standardized (zero mean, unit variance).")
+
+    # 4. Correlation Filtering
+    x_tr_filtered, x_te_filtered = correlation_filtering(x_tr_normalized, x_te_normalized, threshold=0.95)
+    
+    # 4. Add a column of 1s at the beginning for the bias weight (w_0)
+    bias_train = np.ones((x_tr_filtered.shape[0], 1))
+    bias_test = np.ones((x_te_filtered.shape[0], 1))
+    
+    x_tr_final = np.hstack((bias_train, x_tr_filtered))
+    x_te_final = np.hstack((bias_test, x_te_filtered))
+    
+    print(f"Final processed training shape: {x_tr_final.shape}")
+    print(f"Final processed testing shape: {x_te_final.shape}")
+    print("--- Preprocessing Complete ---\n")
+    
+    return x_tr_final, x_te_final
 
 def one_hot_encode_categorical(x_train, x_test, min_categories=2, max_categories=6):
     """
@@ -584,29 +705,3 @@ def calculate_metrics(y_true, probabilities, threshold=0.5):
         "Accuracy": accuracy
     }
 
-
-def find_best_threshold(y_true, probabilities):
-    """Compares different threshold and finds the best one
-    
-    Args:
-    y_true : (N,), actual values of y for the test set
-    probabilities : (N ,), probabilities resulting of the logistic regression
-
-    Returns : 
-
-    results : the different thresholds and their corresponding metrics, sorted by highest F1 score
-    """
-    thresholds = np.arange(0.05, 0.801, 0.01)
-    results = []
-
-    for threshold in thresholds:
-        metrics = calculate_metrics(
-            y_true, probabilities, threshold
-        )
-        results.append({
-            "Threshold": round(float(threshold), 2),
-            **metrics
-        })
-
-    results.sort(key=lambda row: row["F1"], reverse=True)
-    return results
