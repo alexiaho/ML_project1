@@ -17,14 +17,14 @@ ML_project1/
 ├── .gitignore
 ├── implementations_old.py           # an old version of this file
 ├── run_old.ipynb                # an old version of this file
-└── report.pdf                # maximum two pages (references may use page 3)
+└── report.pdf               
 
 ```
 ## Reproduce the best submission:
 To reproduce the best submission, 
 1. get the environment from **environment.yml**
 2. download the dataset from the GitHub of the course: https://github.com/epfml/ML_course.git under project1
-3. run **run.ipynb**. This file only that train the model with the best parameters. 
+3. run **run.ipynb**. This file only that train the model with the best parameters and predict the test dataset . 
 
 ### Workflow
 
