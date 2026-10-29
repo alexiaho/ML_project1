@@ -13,7 +13,7 @@ ML_project1/
 ├── helpers.py                # course-provided data/submission helpers
 ├── environment.yml            # Which is the environment used to make this project.
 ├── implementation.py            # This python script has all the functions implemented for this project.
-├── gd_logistic_submission.csv            # The best submission
+├── submission.csv            # The best submission
 ├── grading_tests           # The original folder from the instructions given at the beginning of this project.
 ├── .gitignore
 └── report_project1_ml.pdf                # maximum two pages (references may use page 3)
