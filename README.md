@@ -15,7 +15,9 @@ ML_project1/
 ├── implementation.py            # This python script has all the functions implemented for this project.
 ├── gd_logistic_submission.csv            # The best submission
 ├── grading_tests           # The original folder from the instructions given at the beginning of this project.
-├── .gitignore           
+├── .gitignore
+├── implementations_old.py           # an old version of this file
+├── run_old.ipynb                # an old version of this file
 └── report.pdf                # maximum two pages (references may use page 3)
 
 ```
