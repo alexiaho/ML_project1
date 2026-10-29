@@ -4,14 +4,21 @@ This is the best version
 The objective of this project is to develop a machine learning model capable of estimating the likelihood of coronary heart disease (MICHD) based on individual lifestyle and clinical factors. Early identification of individuals at elevated risk is an important component of cardiovascular disease prevention. The dataset used in this study originates from Behavioral Risk factor Surveillance System, a surveillance system that collects health-related information through telephone surveys. Using these data, we implemented a binary classification model based on regularized logistic regression to estimate the probability of an individual belonging to the positive class.
 ## The content:
 In this repository, you can find:
-- **run.ipynb**: This Jupyter Notebook contains the preprocessing, the models fitting, etc. It is made so our results can be reproducible.
-- **first_data_analysis.ipynb**: The first glance at the dataset to determine the best way to preprocess it.
-- **environment.yml**: Which is the environment used to make this project.
-- **implementation.py**: This python script has all the functions implemented for this project.
-- **helpers.py**: This file has all the functions provided by the course.
-- **.gitignore**:
-- **grading_tests**: The original folder from the instructions given at the beginning of this project.
-- **gd_logistic_submission.csv**: The best submission 
+
+```text
+ML_project1/
+├── README.md
+├── run.ipynb                 # This Jupyter Notebook contains the preprocessing, the models fitting, etc. It is made so our results can be reproducible.
+├── first_data_analysis.ipynb        # The first glance at the dataset to determine the best way to preprocess it.
+├── helpers.py                # course-provided data/submission helpers
+├── environment.yml            # Which is the environment used to make this project.
+├── implementation.py            # This python script has all the functions implemented for this project.
+├── gd_logistic_submission.csv            # The best submission
+├── grading_tests           # The original folder from the instructions given at the beginning of this project.
+├── .gitignore           
+└── report.pdf                # maximum two pages (references may use page 3)
+
+```
 
 ## The preprocessing of the data
 We preprocess the data by:
