@@ -35,7 +35,7 @@ We implemented a Logistic Regression model trained using Stochastic Gradient Des
 To reproduce the best submission, 
 1. get the environment from **environment.yml**
 2. download the dataset from the GitHub of the course: https://github.com/epfml/ML_course.git under project1
-3. run **run.ipynb** after the search for the best model (it takes a long time to run everything). 
+3. run **run.ipynb** after the search for the best model and the best parameters (it takes a long time to run everything). 
 
 ### Workflow
 
