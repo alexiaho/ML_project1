@@ -25,3 +25,13 @@ We implemented a Logistic Regression model trained using Stochastic Gradient Des
 ## Reproduce the best submission:
 To reproduce the best submission, get the environment from **environment.yml**, download the dataset from the GitHub of the course:https://github.com/epfml/ML_course.git under project1 and then run **run.ipynb**. 
 
+### Workflow
+
+1. Load the data and perform exploratory analysis.
+2. Document preprocessing assumptions and fit preprocessing on training partitions only.
+3. Run the holdout experiments as exploratory comparisons.
+4. Compare the candidate SGD variants using the same stratified five-fold splits and collect out-of-fold probabilities.
+5. Select the model variant and decision threshold, refit on all labeled data, and generate `submission.csv`.
+6. Summarize baselines, the most impactful ablations, metrics, and limitations in the report.
+
+
