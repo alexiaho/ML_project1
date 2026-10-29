@@ -1,5 +1,5 @@
 # Project 1 of the course ML :) 
-This is the best version 
+ 
 ### Predicting coronary heart disease (MICDH) with dataset from Behavioral Risk Factor Surveillance System. (from a phonecall to a diagnostic...)
 The objective of this project is to develop a machine learning model capable of estimating the likelihood of coronary heart disease (MICHD) based on individual lifestyle and clinical factors. Early identification of individuals at elevated risk is an important component of cardiovascular disease prevention. The dataset used in this study originates from Behavioral Risk factor Surveillance System, a surveillance system that collects health-related information through telephone surveys. Using these data, we implemented a binary classification model based on regularized logistic regression to estimate the probability of an individual belonging to the positive class.
 ## The content:
@@ -33,7 +33,10 @@ We preprocess the data by:
 We implemented a Logistic Regression model trained using Stochastic Gradient Descent (SGD) and evaluated via k-fold cross-validation.
 
 ## Reproduce the best submission:
-To reproduce the best submission, get the environment from **environment.yml**, download the dataset from the GitHub of the course:https://github.com/epfml/ML_course.git under project1 and then run **run.ipynb** after the search for the best model (it takes a long time to run everything). 
+To reproduce the best submission, 
+1. get the environment from **environment.yml**
+2. download the dataset from the GitHub of the course: https://github.com/epfml/ML_course.git under project1
+3. run **run.ipynb** after the search for the best model (it takes a long time to run everything). 
 
 ### Workflow
 
