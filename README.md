@@ -11,6 +11,7 @@ In this repository, you can find:
 - **helpers.py**: This file has all the functions provided by the course.
 - **.gitignore**:
 - **grading_tests**: The original folder from the instructions given at the beginning of this project.
+- **gd_logistic_submission.csv**: The best submission 
 
 ## The preprocessing of the data
 We preprocess the data by:
