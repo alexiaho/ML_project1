@@ -17,7 +17,7 @@ ML_project1/
 ├── .gitignore
 ├── implementations_old.py           # an old version of this file
 ├── run_old.ipynb                # an old version of this file
-└── report.pdf                # maximum two pages (references may use page 3)
+└── report.pdf               
 
 ```
 ## Reproduce the best submission:
