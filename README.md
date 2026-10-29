@@ -7,7 +7,8 @@ In this repository, you can find:
 ```text
 ML_project1/
 ├── README.md
-├── run.ipynb                 # This Jupyter Notebook contains the preprocessing, the models fitting, etc. It is made so our results can be reproducible.
+├── run.ipynb                         # This Jupyter Notebook contains the preprocessing, and the models fitting, with the best hyperparemetrs. It is made so our results can be reproducible.
+├── detailed_run.ipynb                 # This Jupyter Notebook contains the research of the best model choice and hyperparameters additionally to the run.ipynb contents.
 ├── first_data_analysis.ipynb        # The first glance at the dataset to determine the best way to preprocess it.
 ├── helpers.py                # course-provided data/submission helpers
 ├── environment.yml            # Which is the environment used to make this project.
@@ -15,16 +16,17 @@ ML_project1/
 ├── gd_logistic_submission.csv            # The best submission
 ├── grading_tests           # The original folder from the instructions given at the beginning of this project.
 ├── .gitignore
-├── implementations_old.py           # an old version of this file
-├── run_old.ipynb                # an old version of this file
-└── report.pdf               
+└── report.pdf                # maximum two pages (references may use page 3)
 
 ```
 ## Reproduce the best submission:
 To reproduce the best submission, 
 1. get the environment from **environment.yml**
 2. download the dataset from the GitHub of the course: https://github.com/epfml/ML_course.git under project1
-3. run **run.ipynb**. This file only that train the model with the best parameters and predict the test dataset . 
+3. run **run.ipynb**. This file only that train the model with the best parameters. 
+
+It is possible to run **detailed_run.ipynb** to perform the model coice and parameter choice yourself.
+
 
 ### Workflow
 
