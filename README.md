@@ -20,17 +20,6 @@ ML_project1/
 └── report.pdf                # maximum two pages (references may use page 3)
 
 ```
-
-## The preprocessing of the data
-We preprocess the data by:
-- removing the features for which 90%, 80%, 70% or more of the data were NaN (tried many thresholds)
-- removing the useless feature for this prediction, like the phone number 
-- one hot encoding 
-- removing correlated features to reduce the amount of redundancy in the dataset
-
-## The models implemented 
-We implemented a Logistic Regression model trained using Stochastic Gradient Descent (SGD) and evaluated via k-fold cross-validation.
-
 ## Reproduce the best submission:
 To reproduce the best submission, 
 1. get the environment from **environment.yml**
@@ -46,4 +35,15 @@ To reproduce the best submission,
 5. Select the model variant and decision threshold, refit on all labeled data, and generate `gd_logistic_submission.csv`.
 6. Summarize baselines, the most impactful ablations, metrics, and limitations in the report.
 
+
+
+## The preprocessing of the data
+We preprocess the data by:
+- removing the features for which 90%, 80%, 70% or more of the data were NaN (tried many thresholds)
+- removing the useless feature for this prediction, like the phone number 
+- one hot encoding 
+- removing correlated features to reduce the amount of redundancy in the dataset
+
+## The models implemented 
+We implemented a Logistic Regression model trained using Stochastic Gradient Descent (SGD) and evaluated via k-fold cross-validation.
 
