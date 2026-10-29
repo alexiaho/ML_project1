@@ -24,7 +24,7 @@ ML_project1/
 To reproduce the best submission, 
 1. get the environment from **environment.yml**
 2. download the dataset from the GitHub of the course: https://github.com/epfml/ML_course.git under project1
-3. run **run.ipynb**. This file only that train the model with the best parameters. 
+3. run **run.ipynb**. This file only that train the model with the best parameters and predict the test dataset . 
 
 ### Workflow
 
